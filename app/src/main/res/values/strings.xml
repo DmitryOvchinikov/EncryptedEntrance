@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">EncryptedEntrance</string>
+    <string name="input_secret_password">Input the secret password!</string>
+    <string name="enter">Enter</string>
+</resources>
