@@ -2,4 +2,7 @@
     <string name="app_name">EncryptedEntrance</string>
     <string name="input_secret_password">Input the secret password!</string>
     <string name="enter">Enter</string>
+    <string name="permission_rationale">Contacts Permission</string>
+    <string name="persmission_positive">OK</string>
+    <string name="permission_negative">Cancel</string>
 </resources>

@@ -3,7 +3,7 @@
     package="com.android.encryptedentrance">
 
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
-
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
 
     <application
         android:allowBackup="true"
