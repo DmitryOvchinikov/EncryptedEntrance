@@ -133,6 +133,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     }
 
     //The button listener for the single button of the application
+    //Allowing the user to "enter" the application only if:
+    //
+    //Device flashlight is on.
+    //(Device Android Version - Device Volume Level) % the difference between the clock's minutes equals 0
+    //The phone number 055-222-4444 exists in the device's contact list
+    //User's input in the EditText is the current battery level
+    //User walked at least 10 steps before attempting to enter
+    //
     private View.OnClickListener onClickListener = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
@@ -152,7 +160,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             Log.d(TAG, "    Parameters: \n" + "VOLUME: " + volume_level + "\nVERSION: " + android_version + "\nMINUTES: " + minutes + "\nSTEPS: " + steps);
 
             //TODO: Add steps when they are fixed
-            if ((android_version - volume_level) % minutes == 0 && checkPhoneNumber(getApplicationContext(), MY_PHONE_NUMBER) && input_int == battery_level) {
+            if ((android_version - volume_level) % minutes == 0 && checkPhoneNumber(getApplicationContext(), MY_PHONE_NUMBER) && input_int == battery_level && isFlashLightOn) {
                 Log.d(TAG, "        Secret parameters are valid");
                 Toast.makeText(getApplicationContext(), "Congratulations! You're in!", Toast.LENGTH_SHORT).show();
             } else {
@@ -214,7 +222,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         @Override
         public void onReceive(Context context, Intent intent) {
             battery_level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, 0);
-            Log.d(TAG, "LEVEL: " + battery_level);
         }
     };
 
