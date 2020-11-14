@@ -34,6 +34,7 @@
         android:layout_above="@id/main_BTN_enter"
         android:layout_centerHorizontal="true"
         android:layout_marginBottom="20dp"
+        android:inputType="number"
         />
 
     <com.google.android.material.button.MaterialButton
@@ -42,6 +43,16 @@
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
         android:text="@string/enter"
+        />
+
+    <TextView
+        android:id="@+id/main_LBL_steps"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/main_BTN_enter"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="50dp"
+        android:textSize="24sp"
         />
 
 </RelativeLayout>

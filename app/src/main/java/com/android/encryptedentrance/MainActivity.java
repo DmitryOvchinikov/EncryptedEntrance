@@ -1,7 +1,6 @@
 package com.android.encryptedentrance;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.Manifest;
@@ -27,6 +26,7 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.text.SimpleDateFormat;
@@ -43,6 +43,9 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private static final String TAG = "oof";
     private static final String MY_PHONE_NUMBER = "055-222-4444";
 
+    //LBL
+    private TextView main_LBL_steps;
+
     //BTN
     private Button main_BTN_enter;
 
@@ -57,7 +60,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     //Sensors
     private SensorManager sensorManager;
-    private Sensor countSensor;
+    private Sensor stepsSensor;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -71,6 +74,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         regFlashLightCallback();
         requestPermissions();
 
+        main_LBL_steps.setText("" + 0);
         this.registerReceiver(broadcastReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
     }
@@ -79,6 +83,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         Log.d(TAG, "findViews");
         main_BTN_enter = findViewById(R.id.main_BTN_enter);
         main_EDT_input = findViewById(R.id.main_EDT_input);
+        main_LBL_steps = findViewById(R.id.main_LBL_steps);
     }
 
     private void bindButtonsToListeners() {
@@ -103,32 +108,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                     .setNegativeButtonText(R.string.permission_negative)
                     .setTheme(R.style.Theme_AppCompat)
                     .build());
-        }
-    }
-
-    @Override
-    public void onPermissionsGranted(int requestCode, @NonNull List<String> perms) {
-
-    }
-
-    @Override
-    public void onPermissionsDenied(int requestCode, List<String> perms) {
-        Log.d(TAG, "onPermissionsDenied:" + requestCode + ":" + perms.size());
-
-        // (Optional) Check whether the user denied any permissions and checked "NEVER ASK AGAIN."
-        // This will display a dialog directing them to enable the permission in app settings.
-        if (EasyPermissions.somePermissionPermanentlyDenied(this, perms)) {
-            new AppSettingsDialog.Builder(this).build().show();
-        }
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-
-        if (requestCode == AppSettingsDialog.DEFAULT_SETTINGS_REQ_CODE) {
-            // Do something after user returned from app settings screen, like showing a Toast.
-            Toast.makeText(this, "Returning...", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -157,10 +136,11 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 input_int = Integer.parseInt(input);
             }
 
-            Log.d(TAG, "    Parameters: \n" + "VOLUME: " + volume_level + "\nVERSION: " + android_version + "\nMINUTES: " + minutes + "\nSTEPS: " + steps);
-
-            //TODO: Add steps when they are fixed
-            if ((android_version - volume_level) % minutes == 0 && checkPhoneNumber(getApplicationContext(), MY_PHONE_NUMBER) && input_int == battery_level && isFlashLightOn) {
+            //Change minute difference to 1 in case its actually 0 to be able to do % with it
+            if (minutes == 0) {
+                minutes = 1;
+            }
+            if ((android_version - volume_level) % minutes == 0 && checkPhoneNumber(getApplicationContext(), MY_PHONE_NUMBER) && input_int == battery_level && isFlashLightOn && steps >= 10) {
                 Log.d(TAG, "        Secret parameters are valid");
                 Toast.makeText(getApplicationContext(), "Congratulations! You're in!", Toast.LENGTH_SHORT).show();
             } else {
@@ -188,7 +168,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     //Check if a specific phone-number exists in your Contact list
     private boolean checkPhoneNumber(Context context, String num) {
         Uri uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(num));
-        String[] phone_number_projection =  {ContactsContract.PhoneLookup._ID, ContactsContract.PhoneLookup.NUMBER, ContactsContract.PhoneLookup.DISPLAY_NAME};
+        String[] phone_number_projection = {ContactsContract.PhoneLookup._ID, ContactsContract.PhoneLookup.NUMBER, ContactsContract.PhoneLookup.DISPLAY_NAME};
 
         Cursor cur = context.getContentResolver().query(uri, phone_number_projection, null, null, null);
         try {
@@ -201,7 +181,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
         return false;
     }
-
 
     //Utilizing the flashlight callback to know when the flashlight is on or off so the program will be able to act accordingly
     private CameraManager.TorchCallback myTorchCallBack = new CameraManager.TorchCallback() {
@@ -225,14 +204,40 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
     };
 
+    @Override
+    public void onPermissionsGranted(int requestCode, @NonNull List<String> perms) {
+
+    }
+
+    @Override
+    public void onPermissionsDenied(int requestCode, List<String> perms) {
+        Log.d(TAG, "onPermissionsDenied:" + requestCode + ":" + perms.size());
+
+        // (Optional) Check whether the user denied any permissions and checked "NEVER ASK AGAIN."
+        // This will display a dialog directing them to enable the permission in app settings.
+        if (EasyPermissions.somePermissionPermanentlyDenied(this, perms)) {
+            new AppSettingsDialog.Builder(this).build().show();
+        }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == AppSettingsDialog.DEFAULT_SETTINGS_REQ_CODE) {
+            // Do something after user returned from app settings screen, like showing a Toast.
+            Toast.makeText(this, "Returning...", Toast.LENGTH_SHORT).show();
+        }
+    }
+
     //Register the step-count sensor when inside the application
     @Override
     protected void onResume() {
         super.onResume();
         if (sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null) {
             isMoving = true;
-            countSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
-            sensorManager.registerListener(this, countSensor, SensorManager.SENSOR_DELAY_FASTEST);
+            stepsSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+            sensorManager.registerListener(this, stepsSensor, SensorManager.SENSOR_DELAY_NORMAL);
         } else {
             Toast.makeText(this, "StepCounter sensor not found!", Toast.LENGTH_SHORT).show();
             isMoving = false;
@@ -245,15 +250,16 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onPause();
         isMoving = false;
         if (sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null) {
-            sensorManager.unregisterListener(this, countSensor);
+            sensorManager.unregisterListener(this, stepsSensor);
         }
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
         Log.d(TAG, "onSensorChanged");
-        if (isMoving && event.sensor == countSensor) {
-            steps = (int) event.values[0];
+        if (isMoving && event.sensor == stepsSensor) {
+            steps++;
+            main_LBL_steps.setText("" + steps);
         }
     }
 
