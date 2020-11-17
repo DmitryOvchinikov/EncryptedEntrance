@@ -1,6 +1,7 @@
 package com.android.encryptedentrance;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.Manifest;
@@ -55,12 +56,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     //Data
     private boolean isFlashLightOn;
     private boolean isMoving;
-    private int steps = 0;
+    private int steps = -1;
     private int battery_level;
 
     //Sensors
     private SensorManager sensorManager;
     private Sensor stepsSensor;
+
+    //TODO: fix the API 29 permission crash
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -72,7 +75,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         findViews();
         bindButtonsToListeners();
         regFlashLightCallback();
-        requestPermissions();
+
+        //ACTIVITY_RECOGNITION requires an active permission check since API 29
+        if (Build.VERSION.SDK_INT >= 29) {
+            requestPermissions(new String[]{Manifest.permission.ACTIVITY_RECOGNITION, Manifest.permission.READ_CONTACTS});
+        } else {
+            requestPermissions(new String[]{Manifest.permission.READ_CONTACTS});
+        }
 
         main_LBL_steps.setText("" + 0);
         this.registerReceiver(broadcastReceiver, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
@@ -96,14 +105,21 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         cm.registerTorchCallback(myTorchCallBack, null);
     }
 
-    @AfterPermissionGranted(1111)
-    private void requestPermissions() {
-        if (EasyPermissions.hasPermissions(this, Manifest.permission.READ_CONTACTS)) {
+    private void requestPermissions(String[] perms) {
+        if (EasyPermissions.hasPermissions(this, perms)) {
             Log.d("TAG", "Permission granted!");
         } else {
             Log.d("TAG", "Permission denied!");
-            EasyPermissions.requestPermissions(new PermissionRequest.Builder(this, 1111, Manifest.permission.READ_CONTACTS)
-                    .setRationale(R.string.permission_rationale)
+
+            int rationale;
+            if (Build.VERSION.SDK_INT >= 29) {
+                rationale = R.string.permission_contacts_and_activity_recognition_rationale;
+            } else {
+                rationale = R.string.permission_contacts_rationale;
+            }
+
+            EasyPermissions.requestPermissions(new PermissionRequest.Builder(this, 1111, perms)
+                    .setRationale(rationale)
                     .setPositiveButtonText(R.string.persmission_positive)
                     .setNegativeButtonText(R.string.permission_negative)
                     .setTheme(R.style.Theme_AppCompat)
@@ -213,8 +229,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onPermissionsDenied(int requestCode, List<String> perms) {
         Log.d(TAG, "onPermissionsDenied:" + requestCode + ":" + perms.size());
 
-        // (Optional) Check whether the user denied any permissions and checked "NEVER ASK AGAIN."
-        // This will display a dialog directing them to enable the permission in app settings.
+        // Check whether the user denied any permissions and checked "NEVER ASK AGAIN."
         if (EasyPermissions.somePermissionPermanentlyDenied(this, perms)) {
             new AppSettingsDialog.Builder(this).build().show();
         }
@@ -225,8 +240,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onActivityResult(requestCode, resultCode, data);
 
         if (requestCode == AppSettingsDialog.DEFAULT_SETTINGS_REQ_CODE) {
-            // Do something after user returned from app settings screen, like showing a Toast.
-            Toast.makeText(this, "Returning...", Toast.LENGTH_SHORT).show();
+            // Do something after user returned from app settings screen
+            Toast.makeText(this, "Returning from Setting tab", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -234,10 +249,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     @Override
     protected void onResume() {
         super.onResume();
-        if (sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null) {
+        if (sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) != null) {
             isMoving = true;
             stepsSensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
-            sensorManager.registerListener(this, stepsSensor, SensorManager.SENSOR_DELAY_NORMAL);
+            sensorManager.registerListener(this, stepsSensor, SensorManager.SENSOR_DELAY_GAME);
         } else {
             Toast.makeText(this, "StepCounter sensor not found!", Toast.LENGTH_SHORT).show();
             isMoving = false;
@@ -249,7 +264,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     protected void onPause() {
         super.onPause();
         isMoving = false;
-        if (sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null) {
+        if (sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) != null) {
             sensorManager.unregisterListener(this, stepsSensor);
         }
     }
